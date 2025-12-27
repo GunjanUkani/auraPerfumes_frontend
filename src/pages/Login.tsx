@@ -243,17 +243,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                 ) : (
                   'Sign In'
                 )}
-              </button>
-              
-              {/* Demo Credentials Note */}
-              <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                <p className="text-xs md:text-sm text-gray-700 text-center">
-                  For testing: <span className="font-medium">demo@example.com</span> / <span className="font-medium">demo123</span>
-                </p>
-                <p className="text-xs text-gray-500 text-center mt-1">
-                  Or use your registered account
-                </p>
-              </div>
+              </button>              
             </form>
 
             {/* Sign Up Link */}

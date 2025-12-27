@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Package, CheckCircle, Clock, Truck, XCircle, ShoppingBag, Download, X, Filter, Search, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Package, CheckCircle, Clock, Truck, XCircle, ShoppingBag, Download, X, Search, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Define TypeScript interfaces for better type safety
@@ -57,11 +57,13 @@ const Orders: React.FC = () => {
   const [cancelReason, setCancelReason] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [showFilters, setShowFilters] = useState(false);
+  const [timeFilter, setTimeFilter] = useState<string>('');
+  //const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [ordersPerPage] = useState(4); // Show 4 orders per page like in image
+  const [ordersPerPage] = useState(50); // Show 4 orders per page like in image
   const [showTrackingModal, setShowTrackingModal] = useState(false);
   const [trackingInfo, setTrackingInfo] = useState<TrackingInfo[]>([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Load orders from localStorage
@@ -95,13 +97,40 @@ const Orders: React.FC = () => {
     }
   }, []);
 
-  // Filter orders based on search and status
+  // Filter orders based on search, status, and time
   useEffect(() => {
     let result = orders;
 
     // Apply status filter
     if (statusFilter !== 'all') {
       result = result.filter(order => order.status === statusFilter);
+    }
+
+    // Apply time filter
+    if (timeFilter) {
+      const now = new Date();
+      result = result.filter(order => {
+        const orderDate = new Date(order.date);
+        
+        switch (timeFilter) {
+          case '30days':
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(now.getDate() - 30);
+            return orderDate >= thirtyDaysAgo;
+          
+          case '2024':
+            return orderDate.getFullYear() === 2024;
+          
+          case '2023':
+            return orderDate.getFullYear() === 2023;
+          
+          case '2022':
+            return orderDate.getFullYear() === 2022;
+          
+          default:
+            return true;
+        }
+      });
     }
 
     // Apply search filter
@@ -118,13 +147,73 @@ const Orders: React.FC = () => {
 
     setFilteredOrders(result);
     setCurrentPage(1); // Reset to first page when filters change
-  }, [orders, statusFilter, searchQuery]);
+  }, [orders, statusFilter, timeFilter, searchQuery]);
 
   // Pagination logic
   const indexOfLastOrder = currentPage * ordersPerPage;
   const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
   const currentOrders = filteredOrders.slice(indexOfFirstOrder, indexOfLastOrder);
   const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
+
+  // Pagination functions
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const goToPreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const goToPage = (pageNumber: number) => {
+    if (pageNumber >= 1 && pageNumber <= totalPages) {
+      setCurrentPage(pageNumber);
+    }
+  };
+
+  // Generate page numbers for pagination
+  const getPageNumbers = () => {
+    const pageNumbers = [];
+    const maxPagesToShow = 5;
+    
+    if (totalPages <= maxPagesToShow) {
+      // Show all pages if total pages are less than max
+      for (let i = 1; i <= totalPages; i++) {
+        pageNumbers.push(i);
+      }
+    } else {
+      // Show limited pages with ellipsis
+      if (currentPage <= 3) {
+        // Near the beginning
+        for (let i = 1; i <= 4; i++) {
+          pageNumbers.push(i);
+        }
+        pageNumbers.push('...');
+        pageNumbers.push(totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        // Near the end
+        pageNumbers.push(1);
+        pageNumbers.push('...');
+        for (let i = totalPages - 3; i <= totalPages; i++) {
+          pageNumbers.push(i);
+        }
+      } else {
+        // In the middle
+        pageNumbers.push(1);
+        pageNumbers.push('...');
+        pageNumbers.push(currentPage - 1);
+        pageNumbers.push(currentPage);
+        pageNumbers.push(currentPage + 1);
+        pageNumbers.push('...');
+        pageNumbers.push(totalPages);
+      }
+    }
+    
+    return pageNumbers;
+  };
 
   // View Details Handler
   const handleViewDetails = (order: Order) => {
@@ -652,6 +741,7 @@ const Orders: React.FC = () => {
 
   const clearFilters = () => {
     setStatusFilter('all');
+    setTimeFilter('');
     setSearchQuery('');
   };
 
@@ -702,20 +792,33 @@ const Orders: React.FC = () => {
       animate="visible"
       variants={pageAnimation}
       transition={mediumTransition}
-      className="min-h-screen bg-gray-50 pt-16 pb-12"
+      className="min-h-screen bg-gray-50 pt-10 pb-10"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         {/* Breadcrumb - Exactly like image */}
         <motion.div 
-          variants={slideDownAnimation}
-          transition={{ ...mediumTransition, delay: 0.1 }}
-          className="py-3 text-sm text-gray-600"
+          className="mb-8 flex justify-between items-center"
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.4 }}
         >
-          <span className="hover:text-black cursor-pointer"><a href="/">Home</a></span>
-          <span className="mx-2">›</span>
-          <span className="hover:text-black cursor-pointer"><a href="/profile">My Account</a></span>
-          <span className="mx-2">›</span>
-          <span className="font-medium text-black">My Orders</span>
+          <div>
+            <h1 className="text-3xl font-serif font-light tracking-wide">
+              My Orders
+            </h1>
+            <p className="text-gray-600 mt-2">
+              Manage your Orders, view order history, track shipments, and handle returns all in one place.
+            </p>
+          </div>
+          <motion.button
+            onClick={() => navigate('/profile')}
+            className="text-gray-700 hover:text-gray-900"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            ← Back to Profile
+          </motion.button>
+          {/*<span className="font-medium text-black">My Orders</span>*/}
         </motion.div>
 
         <motion.div 
@@ -739,7 +842,7 @@ const Orders: React.FC = () => {
                   onClick={clearFilters}
                   className="text-blue-600 text-sm hover:text-blue-800"
                 >
-                  Clear all
+                  Clear all filters
                 </motion.button>
               </div>
 
@@ -774,9 +877,15 @@ const Orders: React.FC = () => {
               <div>
                 <h4 className="font-medium mb-3 text-gray-700">ORDER TIME</h4>
                 <div className="space-y-2">
-                  {['Last 30 days', '2024', '2023', '2022'].map((time, index) => (
+                  {[
+                    { label: 'All Orders', value: '' },
+                    { label: 'Last 30 days', value: '30days' },
+                    { label: '2024', value: '2024' },
+                    { label: '2023', value: '2023' },
+                    { label: '2022', value: '2022' }
+                  ].map((time, index) => (
                     <motion.label 
-                      key={time} 
+                      key={time.value} 
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ ...mediumTransition, delay: 0.15 * index }}
@@ -785,14 +894,29 @@ const Orders: React.FC = () => {
                       <input
                         type="radio"
                         name="time"
+                        value={time.value}
+                        checked={timeFilter === time.value}
+                        onChange={(e) => setTimeFilter(e.target.value)}
                         className="mr-3 h-4 w-4 text-blue-600"
                       />
-                      <span className="text-gray-600">{time}</span>
+                      <span className="text-gray-600">{time.label}</span>
                     </motion.label>
                   ))}
                 </div>
               </div>
             </div>
+
+            {/* Show All Orders Button */}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              transition={fastTransition}
+              onClick={clearFilters}
+              className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition flex items-center justify-center font-medium mb-4"
+            >
+              <Package size={18} className="mr-2" />
+              Show All Orders ({orders.length})
+            </motion.button>
 
             {/* Shop More Button */}
             <Link
@@ -823,17 +947,53 @@ const Orders: React.FC = () => {
               transition={{ ...mediumTransition, delay: 0.2 }}
               className="bg-white rounded-lg shadow-sm p-4 mb-6"
             >
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                <input
-                  type="text"
-                  placeholder="Search your orders here"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300"
-                />
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                  <input
+                    type="text"
+                    placeholder="Search your orders here"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-300"
+                  />
+                </div>
+                
+                <div className="flex gap-4">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={clearFilters}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium whitespace-nowrap"
+                  >
+                    Show All Orders
+                  </motion.button>
+                  
+                  <div className="flex items-center gap-2 bg-gray-100 px-3 py-2 rounded-lg">
+                    <span className="text-gray-600 text-sm">Show:</span>
+                    <span className="font-medium">{ordersPerPage}</span>
+                  </div>
+                </div>
               </div>
             </motion.div>
+
+            {/* Pagination Info */}
+            {filteredOrders.length > 0 && (
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex justify-between items-center mb-4 bg-white p-3 rounded-lg shadow-sm"
+              >
+                <div className="text-sm text-gray-600">
+                  Showing <span className="font-semibold">{indexOfFirstOrder + 1}-{Math.min(indexOfLastOrder, filteredOrders.length)}</span> of <span className="font-semibold">{filteredOrders.length}</span> orders
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600">Page:</span>
+                  <span className="font-semibold">{currentPage} / {totalPages}</span>
+                </div>
+              </motion.div>
+            )}
 
             {/* Orders List - Flipkart Style */}
             <AnimatePresence mode="wait">
@@ -849,105 +1009,192 @@ const Orders: React.FC = () => {
                   <Package size={64} className="mx-auto text-gray-400 mb-6" />
                   <h3 className="text-xl font-semibold text-gray-900 mb-4">No orders found</h3>
                   <p className="text-gray-600 mb-8">Try changing your filters or search query</p>
+                  {/* <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={clearFilters}
+                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                  >
+                    Show All Orders
+                  </motion.button> */}
                 </motion.div>
               ) : (
-                <div className="space-y-[10px]">
-                  {currentOrders.map((order, index) => (
-                    <motion.div
-                      key={order.id}
+                <>
+                  <div className="space-y-[10px]">
+                    {currentOrders.map((order, index) => (
+                      <motion.div
+                        key={order.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ ...mediumTransition, delay: index * 0.1 }}
+                        whileHover={{ 
+                          y: -4,
+                          transition: fastTransition
+                        }}
+                        className="bg-white border border-gray-200 rounded-sm hover:shadow-md transition-all duration-300 cursor-pointer overflow-hidden"
+                        onClick={() => handleViewDetails(order)}
+                      >
+                        <div className="p-5 flex flex-col md:flex-row items-start justify-between">
+                          {/* Section 1: Product Image & Details */}
+                          <div className="flex gap-6 flex-1 min-w-0">
+                            <motion.div 
+                              whileHover={{ scale: 1.05 }}
+                              transition={fastTransition}
+                              className="w-[80px] h-[80px] flex-shrink-0"
+                            >
+                              <img
+                                src={order.products[0]?.img}
+                                alt={order.products[0]?.name}
+                                className="w-full h-full object-contain"
+                              />
+                            </motion.div>
+
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-[14px] text-[#212121] hover:text-[#2874f0] mb-1 leading-tight line-clamp-2">
+                                {order.products[0]?.name}
+                              </h4>
+                              <p className="text-[12px] text-[#878787] mt-1">
+                                {formatDate(order.date)}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Section 2: Price */}
+                          <div className="md:w-[15%] w-full mt-2 md:mt-0">
+                            <span className="text-[14px] text-[#212121]">
+                              ${calculateTotalWithTax(order.total).toFixed(2)}
+                            </span>
+                          </div>
+
+                          {/* Section 3: Status & Review Action */}
+                          <div className="md:w-[30%] w-full mt-4 md:mt-0">
+                            <div className="flex flex-col">
+                              {/* Delivery Status Row */}
+                              <div className="flex items-center gap-2">
+                                <motion.div 
+                                  animate={{ 
+                                    scale: [1, 1.2, 1],
+                                    transition: { repeat: Infinity, duration: 2 }
+                                  }}
+                                  className={`w-[10px] h-[10px] rounded-full flex-shrink-0 ${order.status === 'delivered' ? 'bg-[#26a541]' :
+                                      order.status === 'cancelled' ? 'bg-[#ff6161]' : 'bg-[#ff9f00]'
+                                    }`}
+                                ></motion.div>
+                                <span className="text-[14px] font-medium text-[#212121]">
+                                  {order.status === 'delivered'
+                                    ? `Delivered on ${getDeliveryDate(order.date)}`
+                                    : getStatusText(order.status)}
+                                </span>
+                              </div>
+
+                              {/* Status Sub-text */}
+                              <p className="text-[12px] text-[#212121] mt-1 ml-4">
+                                {order.status === 'delivered'
+                                  ? 'Your item has been delivered'
+                                  : order.status === 'cancelled'
+                                    ? 'You requested a cancellation'
+                                    : 'Order is being processed'}
+                              </p>
+
+                              {/* Rate & Review Action (matches your small image exactly) */}
+                              {order.status === 'delivered' && (
+                                <motion.button 
+                                  whileHover={{ scale: 1.05 }}
+                                  whileTap={{ scale: 0.95 }}
+                                  transition={fastTransition}
+                                  className="flex items-center gap-2 mt-4 ml-4 group"
+                                >
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="#2874f0" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                                  </svg>
+                                  <span className="text-[14px] font-medium text-[#2874f0] group-hover:underline">
+                                    Rate & Review Product
+                                  </span>
+                                </motion.button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+
+                  {/* Pagination Controls */}
+                  {filteredOrders.length > ordersPerPage && (
+                    <motion.div 
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ ...mediumTransition, delay: index * 0.1 }}
-                      whileHover={{ 
-                        y: -4,
-                        transition: fastTransition
-                      }}
-                      className="bg-white border border-gray-200 rounded-sm hover:shadow-md transition-all duration-300 cursor-pointer overflow-hidden"
-                      onClick={() => handleViewDetails(order)}
+                      transition={{ delay: 0.5 }}
+                      className="bg-white border border-gray-200 mt-6 p-6 rounded-lg"
                     >
-                      <div className="p-5 flex flex-col md:flex-row items-start justify-between">
-                        {/* Section 1: Product Image & Details */}
-                        <div className="flex gap-6 flex-1 min-w-0">
-                          <motion.div 
+                      <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div className="text-sm text-gray-600">
+                          पेज {currentPage} का {totalPages} - कुल {filteredOrders.length} ऑर्डर्स
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          {/* Previous Button */}
+                          <motion.button
                             whileHover={{ scale: 1.05 }}
-                            transition={fastTransition}
-                            className="w-[80px] h-[80px] flex-shrink-0"
+                            whileTap={{ scale: 0.95 }}
+                            onClick={goToPreviousPage}
+                            disabled={currentPage === 1}
+                            className={`p-2 rounded-lg border ${
+                              currentPage === 1 
+                                ? 'border-gray-200 text-gray-400 cursor-not-allowed' 
+                                : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                            }`}
                           >
-                            <img
-                              src={order.products[0]?.img}
-                              alt={order.products[0]?.name}
-                              className="w-full h-full object-contain"
-                            />
-                          </motion.div>
-
-                          <div className="flex-1 min-w-0">
-                            <h4 className="text-[14px] text-[#212121] hover:text-[#2874f0] mb-1 leading-tight line-clamp-2">
-                              {order.products[0]?.name}
-                            </h4>
-                            <p className="text-[12px] text-[#878787] mt-1">
-                              {formatDate(order.date)}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Section 2: Price */}
-                        <div className="md:w-[15%] w-full mt-2 md:mt-0">
-                          <span className="text-[14px] text-[#212121]">
-                            ${calculateTotalWithTax(order.total).toFixed(2)}
-                          </span>
-                        </div>
-
-                        {/* Section 3: Status & Review Action */}
-                        <div className="md:w-[30%] w-full mt-4 md:mt-0">
-                          <div className="flex flex-col">
-                            {/* Delivery Status Row */}
-                            <div className="flex items-center gap-2">
-                              <motion.div 
-                                animate={{ 
-                                  scale: [1, 1.2, 1],
-                                  transition: { repeat: Infinity, duration: 2 }
-                                }}
-                                className={`w-[10px] h-[10px] rounded-full flex-shrink-0 ${order.status === 'delivered' ? 'bg-[#26a541]' :
-                                    order.status === 'cancelled' ? 'bg-[#ff6161]' : 'bg-[#ff9f00]'
-                                  }`}
-                              ></motion.div>
-                              <span className="text-[14px] font-medium text-[#212121]">
-                                {order.status === 'delivered'
-                                  ? `Delivered on ${getDeliveryDate(order.date)}`
-                                  : getStatusText(order.status)}
-                              </span>
-                            </div>
-
-                            {/* Status Sub-text */}
-                            <p className="text-[12px] text-[#212121] mt-1 ml-4">
-                              {order.status === 'delivered'
-                                ? 'Your item has been delivered'
-                                : order.status === 'cancelled'
-                                  ? 'You requested a cancellation'
-                                  : 'Order is being processed'}
-                            </p>
-
-                            {/* Rate & Review Action (matches your small image exactly) */}
-                            {order.status === 'delivered' && (
-                              <motion.button 
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                transition={fastTransition}
-                                className="flex items-center gap-2 mt-4 ml-4 group"
-                              >
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="#2874f0" xmlns="http://www.w3.org/2000/svg">
-                                  <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
-                                </svg>
-                                <span className="text-[14px] font-medium text-[#2874f0] group-hover:underline">
-                                  Rate & Review Product
+                            <ChevronLeft size={20} />
+                          </motion.button>
+                          
+                          {/* Page Numbers */}
+                          <div className="flex gap-1">
+                            {getPageNumbers().map((pageNum, index) => (
+                              pageNum === '...' ? (
+                                <span key={`ellipsis-${index}`} className="px-3 py-2 text-gray-500">
+                                  ...
                                 </span>
-                              </motion.button>
-                            )}
+                              ) : (
+                                <motion.button
+                                  key={pageNum}
+                                  whileHover={{ scale: 1.1 }}
+                                  whileTap={{ scale: 0.9 }}
+                                  onClick={() => goToPage(pageNum as number)}
+                                  className={`w-10 h-10 rounded-lg border ${
+                                    currentPage === pageNum
+                                      ? 'bg-blue-600 text-white border-blue-600'
+                                      : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                                  }`}
+                                >
+                                  {pageNum}
+                                </motion.button>
+                              )
+                            ))}
                           </div>
+                          
+                          {/* Next Button */}
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={goToNextPage}
+                            disabled={currentPage === totalPages}
+                            className={`p-2 rounded-lg border ${
+                              currentPage === totalPages
+                                ? 'border-gray-200 text-gray-400 cursor-not-allowed'
+                                : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                            }`}
+                          >
+                            <ChevronRight size={20} />
+                          </motion.button>
+                        </div>
+                        
+                        <div className="text-sm text-gray-500">
+                          {ordersPerPage} ऑर्डर्स प्रति पेज
                         </div>
                       </div>
                     </motion.div>
-                  ))}
+                  )}
 
                   {/* Footer pagination-style message */}
                   <motion.div 
@@ -957,10 +1204,13 @@ const Orders: React.FC = () => {
                     className="text-center py-10 bg-white border border-gray-200 mt-4"
                   >
                     <p className="text-[12px] font-medium text-[#878787] uppercase tracking-wide">
-                      No More Results To Display
+                      {currentPage === totalPages ? 'Last Page Reached' : `Page ${currentPage} of ${totalPages}`}
+                    </p>
+                    <p className="text-[11px] text-[#878787] mt-2">
+                      Showing {currentOrders.length} of {filteredOrders.length} orders
                     </p>
                   </motion.div>
-                </div>
+                </>
               )}
             </AnimatePresence>
           </motion.div>
