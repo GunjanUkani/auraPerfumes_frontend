@@ -181,7 +181,7 @@ const ProductsPage = () => {
             </ul>
           </div>
 
-          <motion.div
+          {/* <motion.div
             whileHover={{ x: 2 }}
           >
             <h3 className="text-xs uppercase tracking-[0.2em] font-bold mb-4">Price Range</h3>
@@ -196,7 +196,7 @@ const ProductsPage = () => {
               <span>$100</span>
               <span>$300</span>
             </div>
-          </motion.div>
+          </motion.div> */}
         </motion.aside>
 
         {/* Product Grid */}
