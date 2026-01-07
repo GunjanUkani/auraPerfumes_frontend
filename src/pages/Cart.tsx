@@ -5,10 +5,12 @@ import { ShoppingBag, Trash2, Plus, Minus, ArrowRight } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import toast from 'react-hot-toast';
 import { motion, useAnimation, useInView } from 'framer-motion';
+import { useAuth } from '../context/AuthContext';
 
 const CartPage: React.FC = () => {
   const navigate = useNavigate();
   const { cartItems, removeFromCart, updateQuantity, clearCart, totalItems, totalPrice } = useCart();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   
   // Animation controls
   const controls = useAnimation();
@@ -46,31 +48,36 @@ const CartPage: React.FC = () => {
       toast.error('Your cart is empty');
       return;
     }
-    
-    // Save order to localStorage
-    const order = {
-      id: `ORD-${Date.now()}`,
-      date: new Date().toISOString().split('T')[0],
-      items: totalItems,
-      total: totalPrice,
-      products: cartItems,
-      status: 'processing'
-    };
-    
-    // Get existing orders
-    const existingOrders = JSON.parse(localStorage.getItem('perfume_orders') || '[]');
-    const updatedOrders = [order, ...existingOrders];
-    localStorage.setItem('perfume_orders', JSON.stringify(updatedOrders));
-    
-    // Clear cart
-    clearCart();
-    
-    toast.success('Order placed successfully!');
-    
-    // Redirect to orders page
-    setTimeout(() => {
-      window.location.href = '/orders';
-    }, 1000);
+
+    // Debug info
+    console.log('=== Checkout Clicked ===');
+    console.log('isAuthenticated:', isAuthenticated);
+    console.log('Token:', localStorage.getItem('token'));
+    console.log('User:', localStorage.getItem('user'));
+
+    if (isAuthenticated) {
+      // User is logged in, go to checkout
+      console.log('User is authenticated, navigating to checkout');
+      navigate('/checkout');
+    } else {
+      // User is not logged in, redirect to login
+      console.log('User not authenticated, redirecting to login');
+
+      // Save cart data temporarily
+      localStorage.setItem('pendingCheckout', JSON.stringify({
+        items: cartItems,
+        total: totalPrice,
+        timestamp: new Date().toISOString()
+      }));
+
+      // Redirect to login with return URL
+      navigate('/checkout', {
+        state: {
+          from: '/checkout',
+          message: 'Please login to complete your purchase'
+        }
+      });
+    }
   };
 
   if (cartItems.length === 0) {
@@ -194,8 +201,8 @@ const CartPage: React.FC = () => {
                       whileHover={{ scale: 1.02 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <p className="text-2xl font-serif">${(item.price * item.quantity).toFixed(2)}</p>
-                      <p className="text-gray-500">${item.price} each</p>
+                      <p className="text-2xl font">₹{(item.price * item.quantity).toFixed(2)}</p>
+                      <p className="text-gray-500">₹{item.price} each</p>
                     </motion.div>
                   </div>
                 </div>
@@ -245,9 +252,9 @@ const CartPage: React.FC = () => {
             
             <div className="space-y-4 mb-6">
               {[
-                { label: 'Subtotal', value: `$${totalPrice.toFixed(2)}` },
+                { label: 'Subtotal', value: `₹${totalPrice.toFixed(2)}` },
                 { label: 'Shipping', value: 'Free' },
-                { label: 'Tax', value: `$${(totalPrice * 0.1).toFixed(2)}` }
+                { label: 'Tax', value: `₹${(totalPrice * 0.1).toFixed(2)}` }
               ].map((item, index) => (
                 <motion.div
                   key={item.label}
@@ -267,18 +274,19 @@ const CartPage: React.FC = () => {
                 className="border-t pt-4 flex justify-between text-lg font-bold"
               >
                 <span>Total</span>
-                <span>${(totalPrice * 1.1).toFixed(2)}</span>
+                <span>₹{(totalPrice * 1.1).toFixed(2)}</span>
               </motion.div>
             </div>
             
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => navigate('/checkout')}
-              className="w-full bg-black text-white py-4 rounded-lg font-medium hover:bg-gray-900 transition flex items-center justify-center"
+              onClick={handleCheckout}
+              disabled={cartItems.length === 0}
+              className={`w-full ${cartItems.length === 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-black hover:bg-gray-900'} text-white py-4 rounded-lg font-medium transition flex items-center justify-center`}
             >
-              Proceed to Checkout
-              <ArrowRight size={20} className="ml-2" />
+              {cartItems.length === 0 ? 'Cart is Empty' : 'Proceed to Checkout'}
+              {cartItems.length > 0 && <ArrowRight size={20} className="ml-2" />}
             </motion.button>
             
             <motion.p

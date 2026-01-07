@@ -37,9 +37,11 @@ const Header = () => {
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           
           {/* Logo */}
-          <Link to="/" className="text-2xl font-serif tracking-[0.3em] uppercase">
+          <Link to="/" className="text-2xl font-serif tracking-[0.6em] uppercase">
             perfume
+            <p className="text-[10px] uppercase tracking-[0.4em] font-serif">Signature Fragrances</p>
           </Link>
+          
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex space-x-12 text-[10px] uppercase tracking-[0.2em]">

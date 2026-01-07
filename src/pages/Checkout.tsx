@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CreditCard, Truck, Shield, Lock, ArrowLeft } from 'lucide-react';
 import { useCart } from '../context/CartContext';
@@ -98,13 +98,13 @@ const Checkout: React.FC = () => {
     const order = {
       id: `ORD-${Date.now()}`,
       date: new Date().toISOString().split('T')[0],
+      orderDate: new Date().toISOString(), // Add this for consistency
       items: cartItems.reduce((sum, item) => sum + item.quantity, 0),
       total: cart.total,
-      products: cartItems,
+      products: cartItems, // Use products instead of items
       shipping: formData,
       paymentMethod: paymentMethod,
-      status: 'processing',
-      orderDate: new Date().toISOString()
+      status: 'pending', // Changed from 'processing' to 'pending'
     };
     
     // Save to localStorage
@@ -654,7 +654,7 @@ const Checkout: React.FC = () => {
                             </div>
                           </div>
                           <div className="font-semibold">
-                            ${(item.price * item.quantity).toFixed(2)}
+                            ₹{(item.price * item.quantity).toFixed(2)}
                           </div>
                         </motion.div>
                       ))}
@@ -707,17 +707,17 @@ const Checkout: React.FC = () => {
               >
                 <div className="flex justify-between">
                   <span className="text-gray-600">Subtotal</span>
-                  <span>${cart.total.toFixed(2)}</span>
+                  <span>₹{cart.total.toFixed(2)}</span>
                 </div>
                 
                 <div className="flex justify-between">
                   <span className="text-gray-600">Shipping</span>
-                  <span>{calculateShipping() === 0 ? 'Free' : `$${calculateShipping().toFixed(2)}`}</span>
+                  <span>{calculateShipping() === 0 ? 'Free' : `₹${calculateShipping().toFixed(2)}`}</span>
                 </div>
                 
                 <div className="flex justify-between">
                   <span className="text-gray-600">Tax</span>
-                  <span>${calculateTax().toFixed(2)}</span>
+                  <span>₹{calculateTax().toFixed(2)}</span>
                 </div>
               </motion.div>
               
@@ -729,7 +729,7 @@ const Checkout: React.FC = () => {
               >
                 <div className="flex justify-between text-lg font-bold">
                   <span>Total</span>
-                  <span>${calculateTotal().toFixed(2)}</span>
+                  <span>₹{calculateTotal().toFixed(2)}</span>
                 </div>
               </motion.div>
               
